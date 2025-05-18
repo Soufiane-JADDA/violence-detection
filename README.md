@@ -128,6 +128,3 @@ This project is licensed under the [MIT License](LICENSE).
 
 * GitHub: [@Soufiane-JADDA](https://github.com/Soufiane-JADDA)
 * Email: [soufiane.jadda@usmba.ac.ma](mailto:soufiane.jadda@usmba.ac.ma)
-
-```
- 
