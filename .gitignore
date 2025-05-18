@@ -1,0 +1,22 @@
+# Ignore Python cache and logs
+__pycache__/
+*.py[cod]
+*.log
+
+# Ignore dataset and video files
+data/
+*.mp4
+*.avi
+
+# Ignore model weights and checkpoints
+checkpoints/
+*.pt
+*.h5
+
+# Ignore result files
+loss_curve.png
+*.json
+
+# Ignore system files
+.DS_Store
+.env
