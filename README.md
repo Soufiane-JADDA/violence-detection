@@ -5,6 +5,7 @@ This project implements a real-time violence detection system using deep learnin
 ---
 
 ## 🧠 Model Architecture
+![Uploading ChatGPT Image May 16, 2025, 08_42_40 AM.png…]()
 
 - **Backbone**: ResNet18 (pretrained, without final FC layer)
 - **Temporal**: LSTM with 128 hidden units
