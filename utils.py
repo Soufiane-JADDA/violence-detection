@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
+import os
+import matplotlib.pyplot as plt
 import re
+import json
+from tqdm import tqdm
 
 def extract_frames(video_path, max_frames=20, resize=(224, 224)):
     cap = cv2.VideoCapture(video_path)
@@ -27,6 +31,7 @@ def extract_epoch_num(filename):
     return int(match.group(1)) if match else -1
 
 
+# === Plot Training Curve ===
 def save_loss_plot(train_losses, val_losses, output_path):
     plt.figure(figsize=(10, 5))
     plt.plot(train_losses, label='Train Loss')
@@ -41,6 +46,8 @@ def save_loss_plot(train_losses, val_losses, output_path):
     plt.close()
     # plt.show()
 
+
+ # Save loss history
 def save_losses(train_losses, val_losses, loss_log_path="loss_history.json"):
     with open(loss_log_path, "w") as file:
         json.dump({
