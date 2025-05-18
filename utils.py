@@ -4,8 +4,8 @@ import os
 import matplotlib.pyplot as plt
 import re
 import json
-from tqdm import tqdm
 
+# Frame Extraction
 def extract_frames(video_path, max_frames=20, resize=(224, 224)):
     cap = cv2.VideoCapture(video_path)
     frames = []
