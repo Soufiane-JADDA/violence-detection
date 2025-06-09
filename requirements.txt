@@ -4,3 +4,24 @@ opencv-python
 numpy
 matplotlib
 tqdm
+
+
+# for app-API
+fastapi
+uvicorn
+torch
+opencv-python-headless
+torchvision
+numpy
+Pillow
+matplotlib
+python-multipart
+
+# streamlit APP
+streamlit
+torch
+opencv-python-headless
+torchvision
+numpy
+Pillow
+matplotlib

@@ -11,7 +11,7 @@ import seaborn as sns
 # Configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_path = "checkpoints/violence_detector_epoch123_20250517-185702.pt"
-data_dir = r"/home/soufianejd/Downloads/data"
+data_dir = r"/mnt/SDrive/temp 2/real-life-violence-situations-dataset/Real Life Violence Dataset"
 seq_len = 20  # subset of your dataset
 
 # Load model

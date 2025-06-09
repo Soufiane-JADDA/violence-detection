@@ -4,12 +4,15 @@ import torch
 import torch.nn as nn
 from torch.amp import GradScaler
 from torch.amp import autocast
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 from model import ViolenceDetector
 from dataset import ViolenceVideoDataset
-from utils import extract_epoch_num, save_loss_plot, save_losses, load_losses
+from utils import extract_epoch_num, save_loss_plot, save_losses, load_losses, evaluate_and_save, \
+    cleanup_old_folders
+
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def main():
     # === System Info ===
@@ -24,41 +27,60 @@ def main():
 
 
     # === Data Loading ===
-    transform = transforms.Compose([
-        transforms.ToTensor(),
+    # data augmentation to training transforms
+    train_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.RandomHorizontalFlip(),
+        transforms.ColorJitter(),
         transforms.Resize((224, 224)),
-        transforms.Normalize(mean=[0.5]*3, std=[0.5]*3)
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)
     ])
 
+    # simple (just resize + normalize)
+    val_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5] * 3, std=[0.5] * 3)
+    ])
 
-    dataset = ViolenceVideoDataset(DATA_PATH, transform=transform)
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    train_dataset = ViolenceVideoDataset(f"{DATA_PATH}/train", transform=train_transform)
+    val_dataset = ViolenceVideoDataset(f"{DATA_PATH}/val", transform=val_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=6)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
 
     # === Model Setup ===
     model = ViolenceDetector().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
     scaler = GradScaler(device='cuda')
+
+
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
+    # mode='min': you want to minimize validation loss.
+    #
+    # factor=0.5: reduces learning rate by half.
+    #
+    # patience=5: waits 5 epochs without improvement before reducing LR.
 
     start_epoch = 0
 
     # Filter out best model
-    checkpoint_files = [
-        f for f in os.listdir(CHECKPOINT_DIR)
-        if f.endswith('.pt') and f != 'violence_detector_best.pt'
-    ]
+    checkpoint_files = []
+    for root, _, files in os.walk(CHECKPOINT_DIR):
+        for file in files:
+            if file.endswith('.pt') and 'best' not in file:
+                full_path = os.path.join(root, file)
+                checkpoint_files.append(full_path)
 
     # Sort by epoch number
     checkpoint_files = sorted(checkpoint_files, key=extract_epoch_num)
 
     if checkpoint_files:
-        last_ckpt = os.path.join(CHECKPOINT_DIR, checkpoint_files[-1])
+        last_ckpt = checkpoint_files[-1]
         print(f"🔄 Loading checkpoint: {last_ckpt}")
         checkpoint = torch.load(last_ckpt, map_location=device)
         if isinstance(checkpoint, dict) and 'model_state' in checkpoint:
@@ -74,7 +96,14 @@ def main():
     # Load existing loss data if available
     train_losses, val_losses = load_losses(loss_log_path)
 
-    best_loss = float('inf')
+    # Load the best loss from history if it exists
+    if val_losses:
+        best_loss = min(val_losses)
+        print(f"📈 Loaded best validation loss from history: {best_loss:.4f}")
+    else:
+        best_loss = float('inf')
+        print("📈 No validation loss history found. Starting with best_loss = inf")
+
     patience_counter = 0
 
     # === Training Loop ===
@@ -95,6 +124,19 @@ def main():
                     loss = criterion(outputs, targets)
 
                 scaler.scale(loss).backward()
+
+                # Unscale gradients before checking
+                scaler.unscale_(optimizer)
+
+                # 🔍 Print gradient norms for debugging
+                for name, param in model.named_parameters():
+                    if param.grad is not None:
+                        print(f"{name}: grad norm = {param.grad.norm():.4f}")
+
+                print("------")
+                print(f"attn_query grad norm = {model.attn_query.grad.norm():.6f}")
+                print(f"attn_query value norm = {model.attn_query.data.norm():.6f}")
+
                 scaler.step(optimizer)
                 scaler.update()
 
@@ -120,8 +162,17 @@ def main():
 
             print(f"📘 Epoch {epoch+1}/{EPOCHS} - Train Loss: {avg_train_loss:.4f} - Val Loss: {avg_val_loss:.4f}")
 
+            # 🔁 Learning rate scheduler
+            scheduler.step(avg_val_loss)
+
             timestamp = time.strftime("%Y%m%d-%H%M%S")
-            ckpt_path = os.path.join(CHECKPOINT_DIR, f"violence_detector_epoch{epoch+1}_{timestamp}.pt")
+
+            folder = os.path.join(CHECKPOINT_DIR, f"violence_detector_epoch{epoch + 1}")
+            os.makedirs(folder, exist_ok=True)
+
+
+            # Save model checkpoint
+            ckpt_path = os.path.join(folder, f"violence_detector_epoch{epoch + 1}_{timestamp}.pt")
             torch.save({
                 'epoch': epoch + 1,
                 'model_state': model.state_dict(),
@@ -130,30 +181,32 @@ def main():
             }, ckpt_path)
             print(f"✅ Saved: {ckpt_path}")
 
-            # Keep only latest N checkpoints
-            checkpoints = sorted([
-                f for f in os.listdir(CHECKPOINT_DIR)
-                if f.endswith('.pt') and f != 'violence_detector_best.pt' and f != os.path.basename(ckpt_path)
-            ], key=extract_epoch_num)
 
-            if len(checkpoints) > MAX_CHECKPOINTS:
-                to_remove = checkpoints[0]
-                os.remove(os.path.join(CHECKPOINT_DIR, to_remove))
-                print(f"🧹 Removed oldest checkpoint: {to_remove}")
-
+            # Keep only latest N checkpoints Cleanup old folders
+            cleanup_old_folders(CHECKPOINT_DIR, MAX_CHECKPOINTS)
 
             # Save loss history
-            save_losses(train_losses, val_losses, loss_log_path="loss_history.json")
+            save_losses(train_losses, val_losses, loss_log_path=loss_log_path)
 
             # === Plot Training Curve ===
             save_loss_plot(train_losses, val_losses, loss_curve_path)
 
+
+
             # Save best model
             if avg_val_loss < best_loss:
                 best_loss = avg_val_loss
-                best_path = os.path.join(CHECKPOINT_DIR, "violence_detector_best.pt")
-                torch.save(model.state_dict(), best_path)
-                print(f"🏆 Best model updated: {best_path}")
+                best_folder = os.path.join(CHECKPOINT_DIR, "violence_detector_best")
+                os.makedirs(best_folder, exist_ok=True)
+
+                # Save the model weights
+                best_model_path = os.path.join(best_folder, "best_model.pt")
+                torch.save(model.state_dict(), best_model_path)
+
+                # Save evaluation
+                evaluate_and_save(epoch, model, val_loader, device, best_folder)
+
+                print(f"🏆 Best model updated and saved at: {best_folder}")
                 patience_counter = 0
             else:
                 # Early Stopping: If validation loss doesn’t improve for PATIENCE consecutive epochs, training stops early.
@@ -168,15 +221,15 @@ def main():
 
 if __name__=="__main__":
 
-    EPOCHS = 1000  # Reduce for testing
+    EPOCHS = 200  # Reduce for testing
     # ✅ Hyperparameters
     SEQ_LEN = 20
-    BATCH_SIZE = 2
-    LR = 0.0001
+    BATCH_SIZE = 12
+    LR = 1e-5
     MAX_CHECKPOINTS = 5
     PATIENCE = 50
 
-    DATA_PATH = "/mnt/SDrive/temp 2/real-life-violence-situations-dataset/Real Life Violence Dataset"
+    DATA_PATH = "/mnt/SDrive/temp/datasetFight"
     CHECKPOINT_DIR = "./checkpoints"
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     loss_log_path = os.path.join(CHECKPOINT_DIR, "loss_history.json")
