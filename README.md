@@ -5,7 +5,7 @@ A deep learning-based system for detecting violent behavior in videos using CNN 
 ---
 
 ## 🧠 Model Architecture
-![Model Architecture](images/architecture.png)
+![Model Architecture](images/architecture2.png)
 
 - **CNN**: Pretrained ResNet18 for feature extraction
 - **LSTM**: Temporal modeling of frame sequences
