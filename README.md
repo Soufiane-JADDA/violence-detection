@@ -1,33 +1,44 @@
-# 🚨 Violence Detection in Videos using CNN + LSTM
+# Intelligent Violence Detection System
 
-This project implements a real-time violence detection system using deep learning. It combines **ResNet18** (for spatial feature extraction) with **LSTM** (for temporal modeling), trained on video clips to classify scenes as *violent* or *non-violent*.
+A deep learning-based system for detecting violent behavior in videos using CNN + LSTM + Attention. This project includes model training, evaluation, and a Streamlit web application for inference on uploaded videos or live webcam feed.
 
 ---
 
 ## 🧠 Model Architecture
 ![Model Architecture](images/architecture.png)
 
-- **Backbone**: ResNet18 (pretrained, without final FC layer)
-- **Temporal**: LSTM with 128 hidden units
-- **Classifier**: Fully connected layer
-- **Input**: Sequence of RGB video frames (20 frames per clip)
+- **CNN**: Pretrained ResNet18 for feature extraction
+- **LSTM**: Temporal modeling of frame sequences
+- **Attention**: Learnable attention over time steps
+- **Classifier**: Fully connected layer for binary classification
+
+---
+
+## 📊 Dataset
+
+1. **Real Life Violence Situations Dataset**  
+   [Kaggle Link](https://www.kaggle.com/datasets/mohamedmustafa/real-life-violence-situations-dataset)
+
+2. **RWF-2000 Dataset**  
+   [Kaggle Link](https://www.kaggle.com/datasets/vulamnguyen/rwf2000)
 
 ---
 
 ## 📁 Project Structure
 
 ```
-
 violence-detection/
-├── model/                   # Model definition (CNN + LSTM)
-├── data/                    # Dataset directory (train/test)
-├── utils                    # Helper functions (frame extraction, etc.)
+├── model.py                 # Model definition (CNN + LSTM)
+├── utils.py                 # Helper functions (frame extraction, etc.)
+├── dataset.py               # Data preprocessing functions 
 ├── checkpoints/             # Saved models
 ├── train.py                 # Main training script
+├── appStreamlit.py          # Streamlit application
+├── flaskApp.py              # Flask application
 ├── live\_detection.py       # Real-time webcam inference
 ├── evaluate.py              # Evaluation & classification report
 ├── requirements.txt         # Required Python packages
-└── README.md
+└── README.md                # Project overview
 
 ````
 
@@ -47,23 +58,59 @@ source env/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 ````
+---
+To ensure your code runs correctly, especially when training or evaluating your model, **you must update the dataset path** to match the actual location on your system.
+
+For example, in your `train.py` or any other script using the dataset:
+
+```python
+DATA_PATH = "/path/to/your/dataset"
+```
+
+Replace `/path/to/your/dataset` with the **actual** path where your dataset is stored. For example:
+
+```python
+DATA_PATH = "/mnt/SDrive/temp/datasetFight"
+```
+
+✅ This change is essential to avoid `FileNotFoundError` or silent loading of empty datasets.
+
+Would you like me to review or generate a setup script that automatically checks or prompts for this path?
+
 
 ---
 
 ## 🏋️‍♂️ Training the Model
-
+You can modify training parameters like learning rate, batch size, number of epochs, etc., directly inside the main() function.
+! important to changes path of dataset to you actual dataset path
 ```bash
 python train.py
 ```
 
-The model will:
+About the model:
 
-* Train using the Real-Life Violence Dataset
-* Save checkpoints and the best model (`violence_detector_best.pt`)
-* Plot training and validation loss over epochs
+* Trained using the Real-Life Violence Dataset and RWF-2000
+* Saved checkpoints and the best model (`violence_detector_best.pt`)
+* Plotted training and validation loss over epochs
 
 ---
+📺 Flask or Streamlit App 
+Launch the web app:
 
+```bash
+streamlit run appStreamlit.py
+```
+or for Flask app:
+```bash
+python flaskApp.py
+```
+Features:
+
+- Upload and analyze videos for violence
+
+- Live detection from webcam with configurable webcam index
+
+---
 ## 🎥 Real-Time Detection (Webcam)
 
 ```bash
@@ -123,7 +170,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 🙋‍♀️ Maintainer
+## 🙋‍ Maintainer
 
 **Soufiane Jadda**
 

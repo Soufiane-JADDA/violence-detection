@@ -9,7 +9,7 @@ data/
 *.avi
 
 # Ignore model weights and checkpoints
-checkpoints/
+checkpoints_old/
 *.pt
 *.h5
 

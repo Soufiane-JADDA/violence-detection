@@ -4,7 +4,8 @@ opencv-python
 numpy
 matplotlib
 tqdm
-
+scikit-learn
+kagglehub
 
 # for app-API
 fastapi
@@ -25,3 +26,8 @@ torchvision
 numpy
 Pillow
 matplotlib
+
+
+# for app
+playsound
+seaborn

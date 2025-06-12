@@ -229,7 +229,7 @@ if __name__=="__main__":
     MAX_CHECKPOINTS = 5
     PATIENCE = 50
 
-    DATA_PATH = "/mnt/SDrive/temp/datasetFight"
+    DATA_PATH = "/home/soufianejd/datasets/violence"
     CHECKPOINT_DIR = "./checkpoints"
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     loss_log_path = os.path.join(CHECKPOINT_DIR, "loss_history.json")

@@ -1,0 +1,16 @@
+Epoch: 22
+Validation Accuracy: 0.8988
+
+Confusion Matrix:
+[[362  38]
+ [ 43 357]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    NonFight       0.89      0.91      0.90       400
+       Fight       0.90      0.89      0.90       400
+
+    accuracy                           0.90       800
+   macro avg       0.90      0.90      0.90       800
+weighted avg       0.90      0.90      0.90       800

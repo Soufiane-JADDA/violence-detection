@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Violence Detection System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 25px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .nav-tab.active, .nav-tab:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #f8f9ff, #e8f0ff);
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: linear-gradient(45deg, #f0f4ff, #e0ecff);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: linear-gradient(45deg, #f0fff4, #e6ffed);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .result-label {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .result-confidence {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .webcam-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .webcam-feed {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            background: #000;
+            border-radius: 10px;
+            margin: 0 auto;
+            display: block;
+            object-fit: cover;
+        }
+
+        .webcam-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .webcam-id-input {
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            width: 80px;
+            text-align: center;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .prediction-display {
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .prediction-label {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .prediction-confidence {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .violent {
+            color: #dc3545 !important;
+        }
+
+        .non-violent {
+            color: #28a745 !important;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+                border-radius: 15px;
+            }
+
+            .nav-tab {
+                margin: 5px 0;
+                border-radius: 10px;
+            }
+
+            .tab-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> Violence Detection</h1>
+            <p>Advanced AI-powered video analysis system</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('home')">
+                <i class="fas fa-home"></i> Home
+            </button>
+            <button class="nav-tab" onclick="showTab('upload')">
+                <i class="fas fa-upload"></i> Upload Video
+            </button>
+            <button class="nav-tab" onclick="showTab('webcam')">
+                <i class="fas fa-video"></i> Live Detection
+            </button>
+        </div>
+
+        <!-- Home Tab -->
+        <div id="home-tab" class="tab-content active">
+            <div style="text-align: center;">
+                <i class="fas fa-eye" style="font-size: 5rem; color: #667eea; margin-bottom: 30px;"></i>
+                <h2 style="margin-bottom: 20px; color: #333;">Welcome to Violence Detection System</h2>
+                <p style="font-size: 1.1rem; color: #666; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+                    Our advanced deep learning system combines CNN, LSTM, and Attention mechanisms to accurately classify videos as violent or non-violent. Upload a video file or use your webcam for real-time analysis.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px;">
+                    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                        <i class="fas fa-brain" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                        <h3>AI Powered</h3>
+                        <p style="opacity: 0.9;">Advanced neural networks for accurate detection</p>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                        <i class="fas fa-clock" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                        <h3>Real-time</h3>
+                        <p style="opacity: 0.9;">Live webcam analysis with instant results</p>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                        <i class="fas fa-shield-alt" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                        <h3>Secure</h3>
+                        <p style="opacity: 0.9;">Privacy-focused processing with local analysis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload-tab" class="tab-content">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">
+                <i class="fas fa-upload"></i> Upload Video for Analysis
+            </h2>
+
+            <div class="upload-area" onclick="document.getElementById('video-input').click()">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-subtext">Supports MP4, AVI files (max 100MB)</div>
+            </div>
+
+            <input type="file" id="video-input" accept="video/*" style="display: none;">
+
+            <div style="text-align: center;">
+                <button id="analyze-btn" class="btn" onclick="analyzeVideo()" disabled>
+                    <i class="fas fa-search"></i> Analyze Video
+                </button>
+            </div>
+
+            <div class="progress-bar" id="upload-progress" style="display: none;">
+                <div class="progress-fill"></div>
+            </div>
+
+            <div id="upload-result"></div>
+        </div>
+
+        <!-- Webcam Tab -->
+        <div id="webcam-tab" class="tab-content">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">
+                <i class="fas fa-video"></i> Real-time Violence Detection
+            </h2>
+
+            <div class="webcam-container">
+                <video id="webcam-feed" class="webcam-feed" autoplay playsinline style="display: none;"></video>
+                <div id="webcam-placeholder" style="text-align: center; padding: 100px 20px; color: #666;">
+                    <i class="fas fa-video" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                    <p>Webcam feed will appear here</p>
+                </div>
+            </div>
+
+            <div class="webcam-controls">
+                <label for="webcam-id" style="color: #666;">Camera ID:</label>
+                <input type="number" id="webcam-id" class="webcam-id-input" value="0" min="0" max="10">
+                <button id="start-webcam-btn" class="btn" onclick="startWebcam()">
+                    <i class="fas fa-play"></i> Start Detection
+                </button>
+                <button id="stop-webcam-btn" class="btn btn-danger" onclick="stopWebcam()" style="display: none;">
+                    <i class="fas fa-stop"></i> Stop Detection
+                </button>
+            </div>
+
+            <div id="webcam-prediction" class="prediction-display" style="display: none;">
+                <div class="prediction-label">Waiting...</div>
+                <div class="prediction-confidence">0.00%</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let webcamInterval;
+        let isWebcamActive = false;
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // File upload handling
+        document.getElementById('video-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('analyze-btn').disabled = false;
+                document.querySelector('.upload-text').textContent = file.name;
+                document.querySelector('.upload-subtext').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            }
+        });
+
+        // Drag and drop
+        const uploadArea = document.querySelector('.upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('video-input').files = files;
+                document.getElementById('video-input').dispatchEvent(new Event('change'));
+            }
+        });
+
+        function analyzeVideo() {
+            const fileInput = document.getElementById('video-input');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showAlert('Please select a video file first.', 'error');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const progressBar = document.getElementById('upload-progress');
+            const progressFill = progressBar.querySelector('.progress-fill');
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<div class="loading"></div>Analyzing...';
+            progressBar.style.display = 'block';
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = progress + '%';
+            }, 200);
+
+            const formData = new FormData();
+            formData.append('video', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+
+                    if (data.success) {
+                        showResult(data.label, data.confidence);
+                    } else {
+                        showAlert(data.error || 'Analysis failed', 'error');
+                    }
+
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Video';
+                }, 500);
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                progressBar.style.display = 'none';
+                progressFill.style.width = '0%';
+                showAlert('Error: ' + error.message, 'error');
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Video';
+            });
+        }
+
+        function showResult(label, confidence) {
+            const resultDiv = document.getElementById('upload-result');
+            const isViolent = label === 'Violent';
+            const colorClass = isViolent ? 'violent' : 'non-violent';
+
+            resultDiv.innerHTML = `
+                <div class="result-card">
+                    <div class="result-label ${colorClass}">
+                        <i class="fas fa-${isViolent ? 'exclamation-triangle' : 'check-circle'}"></i>
+                        ${label}
+                    </div>
+                    <div class="result-confidence">
+                        Confidence: ${(confidence * 100).toFixed(2)}%
+                    </div>
+                </div>
+            `;
+        }
+
+        function showAlert(message, type) {
+            const resultDiv = document.getElementById('upload-result');
+            resultDiv.innerHTML = `
+                <div class="alert alert-${type === 'error' ? 'error' : 'success'}">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i>
+                    ${message}
+                </div>
+            `;
+        }
+
+        function startWebcam() {
+    const webcamId = document.getElementById('webcam-id').value;
+    const startBtn = document.getElementById('start-webcam-btn');
+    const stopBtn = document.getElementById('stop-webcam-btn');
+    const webcamFeed = document.getElementById('webcam-feed');
+    const webcamPlaceholder = document.getElementById('webcam-placeholder');
+    const predictionDiv = document.getElementById('webcam-prediction');
+
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    webcamPlaceholder.style.display = 'none';
+    webcamFeed.style.display = 'block';
+    predictionDiv.style.display = 'block';
+
+    isWebcamActive = true;
+
+    // Start webcam detection
+    fetch('/start_webcam', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webcam_id: parseInt(webcamId) })
+    }).then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              // Set the video source after confirming the server is ready
+              webcamFeed.src = `/video_feed/${webcamId}`;
+          } else {
+              console.error('Failed to start webcam:', data.error);
+              stopWebcam();
+              alert('Failed to start webcam: ' + (data.error || 'Unknown error'));
+          }
+      }).catch(error => {
+          console.error('Error starting webcam:', error);
+          stopWebcam();
+          alert('Error starting webcam: ' + error.message);
+      });
+
+    // Poll for predictions
+    webcamInterval = setInterval(() => {
+        if (!isWebcamActive) return;
+
+        fetch('/webcam_status')
+            .then(response => response.json())
+            .then(data => {
+                const predictionLabel = predictionDiv.querySelector('.prediction-label');
+                const predictionConfidence = predictionDiv.querySelector('.prediction-confidence');
+
+                const isViolent = data.label === 'Violent';
+                const colorClass = isViolent ? 'violent' : 'non-violent';
+
+                predictionLabel.textContent = data.label || 'Waiting...';
+                predictionLabel.className = `prediction-label ${colorClass}`;
+                predictionConfidence.textContent = data.confidence ? `${(data.confidence * 100).toFixed(2)}%` : '0.00%';
+            })
+            .catch(error => console.error('Prediction polling error:', error));
+    }, 500);
+}
+
+        function stopWebcam() {
+            const startBtn = document.getElementById('start-webcam-btn');
+            const stopBtn = document.getElementById('stop-webcam-btn');
+            const webcamFeed = document.getElementById('webcam-feed');
+            const webcamPlaceholder = document.getElementById('webcam-placeholder');
+            const predictionDiv = document.getElementById('webcam-prediction');
+
+            isWebcamActive = false;
+            clearInterval(webcamInterval);
+
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            webcamFeed.style.display = 'none';
+            webcamPlaceholder.style.display = 'block';
+            predictionDiv.style.display = 'none';
+
+            // Stop webcam detection
+            fetch('/stop_webcam', {
+                method: 'POST'
+            });
+
+            webcamFeed.src = '';
+        }
+    </script>
+</body>
+</html>
